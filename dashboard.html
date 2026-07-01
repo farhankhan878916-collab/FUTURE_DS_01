@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridian Retail Group — Sales Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F3F4F7;
+    --card:#FFFFFF;
+    --ink:#141B24;
+    --muted:#71798A;
+    --border:#E5E8EE;
+    --teal:#0E7C74;
+    --teal-soft:#DCEFEC;
+    --amber:#E2A63B;
+    --amber-soft:#FBEED9;
+    --coral:#C6553B;
+    --green:#2E9B5D;
+    --navy-deep:#0B2436;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1320px;margin:0 auto;padding:28px 32px 64px;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    margin-bottom:22px;flex-wrap:wrap;gap:16px;
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--teal);margin-bottom:6px;
+  }
+  h1{
+    font-family:'Sora',sans-serif;font-weight:800;font-size:32px;margin:0;
+    color:var(--navy-deep);letter-spacing:-.01em;
+  }
+  .subtitle{color:var(--muted);font-size:14px;margin-top:6px;}
+  .period-pill{
+    background:var(--navy-deep);color:#fff;font-family:'IBM Plex Mono',monospace;
+    font-size:12px;padding:8px 14px;border-radius:100px;white-space:nowrap;
+  }
+
+  /* ---------- Pulse ribbon (signature element) ---------- */
+  .pulse{
+    display:flex;align-items:flex-end;gap:3px;height:34px;margin:18px 0 28px;
+    padding:10px 16px 8px;background:var(--card);border:1px solid var(--border);border-radius:12px;
+  }
+  .pulse-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);
+    margin-right:10px;white-space:nowrap;align-self:center;}
+  .pulse-bar{flex:1;background:var(--teal-soft);border-radius:2px 2px 0 0;min-width:6px;position:relative;}
+  .pulse-bar.up{background:var(--teal);}
+  .pulse-bar.down{background:var(--coral);opacity:.75;}
+
+  /* ---------- KPI cards ---------- */
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;
+  }
+  .kpi{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:18px 18px 16px;position:relative;overflow:hidden;
+  }
+  .kpi .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500;}
+  .kpi .value{font-family:'Sora',sans-serif;font-weight:700;font-size:24px;margin-top:8px;color:var(--navy-deep);}
+  .kpi .delta{font-family:'IBM Plex Mono',monospace;font-size:12px;margin-top:6px;display:inline-flex;align-items:center;gap:4px;}
+  .delta.pos{color:var(--green);}
+  .delta.neg{color:var(--coral);}
+  .kpi::after{
+    content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--teal);
+  }
+  .kpi:nth-child(2)::after{background:var(--amber);}
+  .kpi:nth-child(3)::after{background:var(--coral);}
+  .kpi:nth-child(4)::after{background:var(--green);}
+  .kpi:nth-child(5)::after{background:var(--navy-deep);}
+
+  /* ---------- Grid layout ---------- */
+  .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;
+  }
+  .card h3{
+    font-family:'Sora',sans-serif;font-size:15px;margin:0 0 2px;color:var(--navy-deep);
+  }
+  .card .card-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+  .chart-box{position:relative;width:100%;}
+
+  /* ---------- Ranked list ---------- */
+  .rank-list{list-style:none;margin:0;padding:0;}
+  .rank-list li{
+    display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border);
+  }
+  .rank-list li:last-child{border-bottom:none;}
+  .rank-num{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);width:16px;flex-shrink:0;
+  }
+  .rank-name{font-size:13px;font-weight:500;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-bar-track{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;max-width:90px;}
+  .rank-bar-fill{height:100%;background:var(--teal);border-radius:3px;}
+  .rank-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--navy-deep);width:64px;text-align:right;flex-shrink:0;}
+
+  /* ---------- Heatmap table ---------- */
+  table.heat{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.heat th{
+    text-align:left;font-weight:600;color:var(--muted);padding:6px 8px;font-size:11px;
+    text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);
+  }
+  table.heat td{padding:9px 8px;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;}
+  table.heat td.region{font-family:'Inter',sans-serif;font-weight:600;color:var(--navy-deep);}
+
+  /* ---------- Insights ---------- */
+  .insights{margin-top:16px;}
+  .insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .insight-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;}
+  .insight-card h3{font-family:'Sora',sans-serif;font-size:15px;margin:0 0 12px;color:var(--navy-deep);}
+  .insight-card ol,.insight-card ul{margin:0;padding-left:18px;}
+  .insight-card li{font-size:13.5px;line-height:1.65;margin-bottom:8px;color:#2A3340;}
+  .insight-card li b{color:var(--navy-deep);}
+  .tag{
+    display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;
+    background:var(--teal-soft);color:var(--teal);padding:2px 7px;border-radius:5px;margin-right:6px;
+  }
+  .tag.amber{background:var(--amber-soft);color:#8A6314;}
+  .tag.coral{background:#F6E1DB;color:var(--coral);}
+
+  footer{margin-top:28px;text-align:center;color:var(--muted);font-size:11.5px;font-family:'IBM Plex Mono',monospace;}
+
+  @media (max-width:1100px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr);}
+    .grid,.grid-3,.insights-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Meridian Retail Group · Business Sales Analytics</div>
+      <h1>Sales Performance Dashboard</h1>
+      <div class="subtitle">Revenue, profitability &amp; growth analysis — client-ready summary</div>
+    </div>
+    <div class="period-pill">JAN 2024 – DEC 2025 · 5,610 ORDERS</div>
+  </header>
+
+  <div class="pulse" id="pulse"></div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">Total Revenue</div>
+      <div class="value">₹5.44 Cr</div>
+      <div class="delta pos">▲ 8.97% YoY</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Total Profit</div>
+      <div class="value">₹87.8 L</div>
+      <div class="delta pos">16.2% margin</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Total Orders</div>
+      <div class="value">5,610</div>
+      <div class="delta pos">▲ across 24 months</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg Order Value</div>
+      <div class="value">₹9,688</div>
+      <div class="delta pos">per transaction</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Top Category</div>
+      <div class="value" style="font-size:19px;">Technology</div>
+      <div class="delta pos">58% of revenue</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Revenue &amp; Profit Trend</h3>
+      <div class="card-sub">Monthly performance, Jan 2024 – Dec 2025</div>
+      <div class="chart-box" style="height:300px;"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Top Products by Revenue</h3>
+      <div class="card-sub">Top 8 of 24 SKUs</div>
+      <ul class="rank-list" id="topProductsList"></ul>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>Revenue by Category</h3>
+      <div class="card-sub">Share of total sales</div>
+      <div class="chart-box" style="height:230px;"><canvas id="catChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Revenue by Region</h3>
+      <div class="card-sub">North leads, West lags</div>
+      <div class="chart-box" style="height:230px;"><canvas id="regionChart"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Customer Segment Mix</h3>
+      <div class="card-sub">Sales vs. profit contribution</div>
+      <div class="chart-box" style="height:230px;"><canvas id="segChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid" style="grid-template-columns:1.3fr 1fr;">
+    <div class="card">
+      <h3>Region × Category Revenue Heatmap</h3>
+      <div class="card-sub">Where each category performs best (₹)</div>
+      <table class="heat" id="heatTable"></table>
+    </div>
+    <div class="card">
+      <h3>Fulfilment Mix</h3>
+      <div class="card-sub">Orders by shipping mode</div>
+      <div class="chart-box" style="height:230px;"><canvas id="shipChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="insights">
+    <div class="insights-grid">
+      <div class="insight-card">
+        <h3>📌 Key Insights</h3>
+        <ol>
+          <li><span class="tag">Growth</span>Revenue grew <b>8.97% year-over-year</b> (2024 → 2025), with consistent seasonal spikes every <b>Oct–Dec</b> (festive/holiday buying) roughly <b>60% above</b> the January–February baseline.</li>
+          <li><span class="tag">Concentration</span><b>Technology</b> drives 58% of revenue but carries the <b>thinnest margin (14%)</b>, while <b>Office Supplies</b> is only 1.5% of revenue but the <b>highest margin (32%)</b>.</li>
+          <li><span class="tag">Product</span>The <b>Laptop</b> alone generates ~27% of total company revenue — a single-SKU dependency risk.</li>
+          <li><span class="tag amber">Region</span><b>North and East</b> together contribute 55% of sales; <b>West underperforms</b> by ~₹3.5L monthly vs. North despite similar order volume.</li>
+          <li><span class="tag coral">Fulfilment</span><b>60% of orders</b> ship Standard — a potential upsell lever, since Express/Same-Day orders show comparable basket sizes.</li>
+        </ol>
+      </div>
+      <div class="insight-card">
+        <h3>🎯 Recommendations</h3>
+        <ul>
+          <li><b>Diversify category mix:</b> Actively cross-sell Office Supplies &amp; Home Appliances (high margin) alongside Technology purchases to lift blended profitability.</li>
+          <li><b>Protect the holiday surge:</b> Start inventory build-up and marketing spend in <b>September</b> to fully capture the Oct–Dec demand spike; extend similar promos into slow Jan–Feb months.</li>
+          <li><b>De-risk Laptop dependency:</b> Bundle Laptops with Monitors/Mouse/Bags to raise attach-rate revenue instead of relying on single-unit sales.</li>
+          <li><b>Invest in West region:</b> Audit pricing, local marketing and delivery speed — West has the same order count trend as South but a measurable revenue gap.</li>
+          <li><b>Promote faster shipping:</b> Test a small Express-shipping fee waiver for orders above the average order value to shift the mix and improve customer experience.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer>Business Sales Performance Analytics · Sample/simulated dataset built for internship task demonstration · Generated with Python (pandas) + Chart.js</footer>
+</div>
+
+<script>
+const DATA = {"kpis": {"total_sales": 54350090.61, "total_profit": 8784720.64, "total_orders": 5610, "avg_order_value": 9688.07, "profit_margin": 16.16, "yoy_growth": 8.97}, "monthly": [{"Month": "2024-01", "Sales": 1264950.21, "Profit": 201562.69, "Orders": 129}, {"Month": "2024-02", "Sales": 1372952.41, "Profit": 225858.5, "Orders": 152}, {"Month": "2024-03", "Sales": 1983853.95, "Profit": 325705.74, "Orders": 203}, {"Month": "2024-04", "Sales": 1837555.97, "Profit": 284714.94, "Orders": 181}, {"Month": "2024-05", "Sales": 1859704.71, "Profit": 299590.86, "Orders": 184}, {"Month": "2024-06", "Sales": 2217613.45, "Profit": 355400.31, "Orders": 214}, {"Month": "2024-07", "Sales": 1935888.09, "Profit": 320189.11, "Orders": 211}, {"Month": "2024-08", "Sales": 1954278.01, "Profit": 313040.69, "Orders": 194}, {"Month": "2024-09", "Sales": 1544769.66, "Profit": 250800.18, "Orders": 168}, {"Month": "2024-10", "Sales": 3114284.26, "Profit": 529573.29, "Orders": 333}, {"Month": "2024-11", "Sales": 3399035.58, "Profit": 534154.47, "Orders": 309}, {"Month": "2024-12", "Sales": 3523413.18, "Profit": 557089.78, "Orders": 288}, {"Month": "2025-01", "Sales": 1238127.97, "Profit": 215440.01, "Orders": 167}, {"Month": "2025-02", "Sales": 1333025.08, "Profit": 208235.06, "Orders": 145}, {"Month": "2025-03", "Sales": 1968604.7, "Profit": 299657.33, "Orders": 210}, {"Month": "2025-04", "Sales": 2041599.48, "Profit": 323214.97, "Orders": 239}, {"Month": "2025-05", "Sales": 2903690.9, "Profit": 456739.93, "Orders": 262}, {"Month": "2025-06", "Sales": 2126492.71, "Profit": 352690.88, "Orders": 250}, {"Month": "2025-07", "Sales": 3051280.85, "Profit": 486752.74, "Orders": 266}, {"Month": "2025-08", "Sales": 2267022.74, "Profit": 362923.98, "Orders": 236}, {"Month": "2025-09", "Sales": 2189722.11, "Profit": 361338.01, "Orders": 252}, {"Month": "2025-10", "Sales": 3042982.87, "Profit": 496845.72, "Orders": 321}, {"Month": "2025-11", "Sales": 3230717.22, "Profit": 533861.29, "Orders": 353}, {"Month": "2025-12", "Sales": 2948524.5, "Profit": 489340.16, "Orders": 343}], "top_products": [{"Product": "Laptop", "Sales": 14856759.7, "Profit": 2060716.43, "Qty": 323}, {"Product": "Sofa Set", "Sales": 7261705.61, "Profit": 1324842.3, "Qty": 362}, {"Product": "Smartphone", "Sales": 6530654.65, "Profit": 920979.33, "Qty": 312}, {"Product": "Tablet", "Sales": 4718917.86, "Profit": 671203.62, "Qty": 321}, {"Product": "Executive Desk", "Sales": 3106958.76, "Profit": 557531.26, "Qty": 333}, {"Product": "Vacuum Cleaner", "Sales": 2685803.4, "Profit": 534959.08, "Qty": 317}, {"Product": "Monitor 24in", "Sales": 2600024.08, "Profit": 368805.08, "Qty": 300}, {"Product": "Printer", "Sales": 2098550.34, "Profit": 294929.15, "Qty": 289}, {"Product": "Filing Cabinet", "Sales": 1732623.86, "Profit": 309060.22, "Qty": 338}, {"Product": "Air Fryer", "Sales": 1678062.42, "Profit": 338609.09, "Qty": 282}, {"Product": "Office Chair", "Sales": 1344833.3699999999, "Profit": 240796.49, "Qty": 335}, {"Product": "Study Table", "Sales": 1026913.35, "Profit": 184031.98, "Qty": 301}, {"Product": "Mixer Grinder", "Sales": 990304.19, "Profit": 197058.2, "Qty": 305}, {"Product": "Room Heater", "Sales": 826208.59, "Profit": 163369.87, "Qty": 333}, {"Product": "Bookshelf", "Sales": 809850.87, "Profit": 146622.29, "Qty": 265}, {"Product": "Bluetooth Speaker", "Sales": 568982.87, "Profit": 80545.65, "Qty": 329}, {"Product": "Whiteboard", "Sales": 516980.58, "Profit": 165784.76, "Qty": 338}, {"Product": "Electric Kettle", "Sales": 477613.43, "Profit": 96047.77, "Qty": 360}, {"Product": "Wireless Mouse", "Sales": 207220.53, "Profit": 29104.78, "Qty": 335}, {"Product": "Desk Organizer", "Sales": 136289.78, "Profit": 43912.43, "Qty": 317}, {"Product": "Notebook Pack", "Sales": 69427.92, "Profit": 22183.53, "Qty": 332}, {"Product": "Stapler", "Sales": 59458.92, "Profit": 18956.51, "Qty": 343}, {"Product": "Ballpoint Pens", "Sales": 28578.49, "Profit": 9103.13, "Qty": 334}, {"Product": "Sticky Notes", "Sales": 17367.04, "Profit": 5567.69, "Qty": 302}], "categories": [{"Category": "Technology", "Sales": 31581110.03, "Profit": 4426284.04, "Orders": 1614, "Margin_%": 14.015606277915241}, {"Category": "Furniture", "Sales": 15282885.82, "Profit": 2762884.54, "Orders": 1386, "Margin_%": 18.07829079233414}, {"Category": "Home Appliances", "Sales": 6657992.03, "Profit": 1330044.01, "Orders": 1174, "Margin_%": 19.976653681875913}, {"Category": "Office Supplies", "Sales": 828102.73, "Profit": 265508.05, "Orders": 1436, "Margin_%": 32.06221165337784}], "regions": [{"Region": "North", "Sales": 15243913.93, "Profit": 2461297.01, "Orders": 1567, "Margin_%": 16.146096214543505}, {"Region": "East", "Sales": 14520860.65, "Profit": 2357817.15, "Orders": 1451, "Margin_%": 16.237447674976483}, {"Region": "South", "Sales": 12897176.51, "Profit": 2077391.48, "Orders": 1336, "Margin_%": 16.107335418641952}, {"Region": "West", "Sales": 11688139.52, "Profit": 1888215.0, "Orders": 1256, "Margin_%": 16.154966295268867}], "segments": [{"Segment": "Consumer", "Sales": 27639259.66, "Profit": 4443898.68}, {"Segment": "Corporate", "Sales": 17430039.38, "Profit": 2822190.66}, {"Segment": "Small Business", "Sales": 9280791.57, "Profit": 1518631.3}], "ship_modes": [{"Ship_Mode": "Express", "Sales": 15977558.89, "Orders": 1727}, {"Ship_Mode": "Same Day", "Sales": 5684465.53, "Orders": 538}, {"Ship_Mode": "Standard", "Sales": 32688066.19, "Orders": 3345}], "cross": [{"Region": "East", "Furniture": 3737869.01, "Home Appliances": 1825491.52, "Office Supplies": 227416.21, "Technology": 8730083.91}, {"Region": "North", "Furniture": 4326767.15, "Home Appliances": 1960952.25, "Office Supplies": 205277.19, "Technology": 8750917.34}, {"Region": "South", "Furniture": 3691531.09, "Home Appliances": 1616953.75, "Office Supplies": 198087.16, "Technology": 7390604.51}, {"Region": "West", "Furniture": 3526718.57, "Home Appliances": 1254594.51, "Office Supplies": 197322.17, "Technology": 6709504.27}]};
+
+const teal = '#0E7C74', amber = '#E2A63B', coral = '#C6553B', green='#2E9B5D', navy='#0B2436', muted='#9AA3B2';
+const gridColor = '#EDEFF3';
+
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#71798A';
+
+// ---------- Pulse ribbon ----------
+(function(){
+  const el = document.getElementById('pulse');
+  const label = document.createElement('div');
+  label.className='pulse-label';
+  label.textContent='MoM PULSE';
+  el.appendChild(label);
+  const sales = DATA.monthly.map(m=>m.Sales);
+  const maxAbsChange = Math.max(...sales.slice(1).map((v,i)=>Math.abs(v-sales[i])));
+  sales.forEach((v,i)=>{
+    if(i===0) return;
+    const change = v - sales[i-1];
+    const pct = Math.abs(change)/maxAbsChange;
+    const bar = document.createElement('div');
+    bar.className = 'pulse-bar ' + (change>=0?'up':'down');
+    bar.style.height = Math.max(4, pct*30)+'px';
+    bar.title = DATA.monthly[i].Month + ': ' + (change>=0?'+':'') + Math.round(change).toLocaleString();
+    el.appendChild(bar);
+  });
+})();
+
+// ---------- Trend chart ----------
+new Chart(document.getElementById('trendChart'), {
+  type:'line',
+  data:{
+    labels: DATA.monthly.map(m=>m.Month),
+    datasets:[
+      {
+        label:'Sales',
+        data: DATA.monthly.map(m=>m.Sales),
+        borderColor: teal,
+        backgroundColor: 'rgba(14,124,116,0.08)',
+        fill:true,
+        tension:0.35,
+        pointRadius:2,
+        borderWidth:2.5,
+        yAxisID:'y'
+      },
+      {
+        label:'Profit',
+        data: DATA.monthly.map(m=>m.Profit),
+        borderColor: amber,
+        backgroundColor:'rgba(226,166,59,0.0)',
+        fill:false,
+        tension:0.35,
+        pointRadius:2,
+        borderWidth:2,
+        borderDash:[4,3],
+        yAxisID:'y'
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    interaction:{mode:'index', intersect:false},
+    plugins:{ legend:{position:'top', align:'end', labels:{boxWidth:10, usePointStyle:true}} },
+    scales:{
+      y:{ grid:{color:gridColor}, ticks:{ callback:v=>'₹'+(v/100000).toFixed(1)+'L' } },
+      x:{ grid:{display:false}, ticks:{maxRotation:0, autoSkip:true, maxTicksLimit:8} }
+    }
+  }
+});
+
+// ---------- Top products ranked list ----------
+(function(){
+  const list = document.getElementById('topProductsList');
+  const top = DATA.top_products.slice(0,8);
+  const max = top[0].Sales;
+  top.forEach((p,i)=>{
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span class="rank-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="rank-name">${p.Product}</span>
+      <span class="rank-bar-track"><span class="rank-bar-fill" style="width:${(p.Sales/max*100).toFixed(0)}%"></span></span>
+      <span class="rank-val">₹${(p.Sales/100000).toFixed(1)}L</span>
+    `;
+    list.appendChild(li);
+  });
+})();
+
+// ---------- Category donut ----------
+new Chart(document.getElementById('catChart'), {
+  type:'doughnut',
+  data:{
+    labels: DATA.categories.map(c=>c.Category),
+    datasets:[{
+      data: DATA.categories.map(c=>c.Sales),
+      backgroundColor:[teal, amber, coral, navy],
+      borderColor:'#fff',
+      borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'62%',
+    plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}, usePointStyle:true}} }
+  }
+});
+
+// ---------- Region bar ----------
+new Chart(document.getElementById('regionChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.regions.map(r=>r.Region),
+    datasets:[{
+      data: DATA.regions.map(r=>r.Sales),
+      backgroundColor: teal,
+      borderRadius:5,
+      maxBarThickness:38
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false}},
+    scales:{
+      y:{ grid:{color:gridColor}, ticks:{ callback:v=>'₹'+(v/100000).toFixed(0)+'L' } },
+      x:{ grid:{display:false} }
+    }
+  }
+});
+
+// ---------- Segment chart ----------
+new Chart(document.getElementById('segChart'), {
+  type:'bar',
+  data:{
+    labels: DATA.segments.map(s=>s.Segment),
+    datasets:[
+      {label:'Sales', data: DATA.segments.map(s=>s.Sales), backgroundColor: teal, borderRadius:5, maxBarThickness:22},
+      {label:'Profit', data: DATA.segments.map(s=>s.Profit), backgroundColor: amber, borderRadius:5, maxBarThickness:22}
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}, usePointStyle:true}}},
+    scales:{
+      y:{ grid:{color:gridColor}, ticks:{ callback:v=>'₹'+(v/100000).toFixed(0)+'L' } },
+      x:{ grid:{display:false} }
+    }
+  }
+});
+
+// ---------- Ship mode ----------
+new Chart(document.getElementById('shipChart'), {
+  type:'pie',
+  data:{
+    labels: DATA.ship_modes.map(s=>s.Ship_Mode),
+    datasets:[{
+      data: DATA.ship_modes.map(s=>s.Orders),
+      backgroundColor:[amber, coral, teal],
+      borderColor:'#fff', borderWidth:2
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}, usePointStyle:true}} }
+  }
+});
+
+// ---------- Heatmap table ----------
+(function(){
+  const table = document.getElementById('heatTable');
+  const cats = DATA.categories.map(c=>c.Category);
+  let maxVal = 0;
+  DATA.cross.forEach(row=> cats.forEach(c=> maxVal = Math.max(maxVal, row[c]||0)));
+
+  let thead = '<tr><th>Region</th>' + cats.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+  let rows = DATA.cross.map(row=>{
+    let cells = cats.map(c=>{
+      const v = row[c]||0;
+      const intensity = v/maxVal;
+      const bg = `rgba(14,124,116,${(0.08+intensity*0.55).toFixed(2)})`;
+      const textColor = intensity>0.55 ? '#fff' : '#141B24';
+      return `<td style="background:${bg};color:${textColor};">₹${(v/100000).toFixed(1)}L</td>`;
+    }).join('');
+    return `<tr><td class="region">${row.Region}</td>${cells}</tr>`;
+  }).join('');
+  table.innerHTML = thead + rows;
+})();
+</script>
+</body>
+</html>
